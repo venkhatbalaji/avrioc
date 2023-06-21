@@ -1,0 +1,243 @@
+<html>
+  <head>
+    <style>
+      input {
+        height: 2rem;
+        width: 80%;
+      }
+      body {
+        display: flex;
+        flex-direction: column;
+        justify-content: center;
+        align-items: center;
+        font-family: sans-serif;
+        background-color: #f0f0f0;
+      }
+      .search {
+        padding: 35px;
+        border-radius: 10px;
+        width: 48%;
+        display: flex;
+        flex-direction: column;
+        gap: 20px;
+        box-shadow: 0 2px 4px rgba(0, 0, 0, 0.2);
+        background-color: #fff;
+      }
+      #results {
+        margin-top: 2rem;
+        border-radius: 10px;
+        display: flex;
+        grid-template-columns: 1fr;
+        background-color: lightgray;
+        flex-direction: column;
+        padding: 35px 10px;
+        gap: 8px;
+        width: 50%;
+        align-items: center;
+        text-align: center;
+        justify-content: center;
+      }
+      #results.hide {
+        display: none;
+      }
+      .user {
+        display: grid;
+        grid-template-columns: 1.2fr 5fr 3fr;
+        align-items: center;
+        height: 4em;
+        width: 90%;
+        border-radius: 1em;
+        border-width: 2px;
+        border-style: solid;
+        background-color: white;
+        margin-top: 2px;
+        margin-left: 10px;
+      }
+      .userName {
+        height: 1em;
+        margin-left: 0.5em;
+        text-align: center;
+        text-transform: capitalize;
+      }
+      .connection {
+        height: 2em;
+        width: 2rem;
+        margin-left: 0.5em;
+        border-radius: 100%;
+        border-width: 1px;
+        border-style: solid;
+        background-color: white;
+        display: flex;
+        justify-content: center;
+        align-items: center;
+      }
+      .connection span {
+        font-size: 12px;
+      }
+      .hide {
+        height: 1em;
+        margin-left: 0.5em;
+      }
+      .button {
+        height: 2em;
+        margin-right: 0.5em;
+        border-radius: 0.5em;
+        border-width: 1px;
+        border-style: solid;
+        background-color: white;
+        cursor: pointer;
+        text-align: center;
+        align-items: center;
+        display: flex;
+        justify-content: center;
+      }
+      .button:hover {
+        background-color: lightgray;
+      }
+      .error {
+        height: 25em;
+        width: 100%;
+        background-color: rgba(255, 0, 0, 0.5);
+        text-align: center;
+        display: flex;
+        justify-content: center;
+        flex-direction: column;
+        margin: -21px 10px;
+        border-radius: 10px;
+      }
+      .input-container{
+        display: flex;
+        align-items: center;
+        gap: 2%;
+      }
+    </style>
+    <script src="https://code.jquery.com/jquery-3.6.0.min.js"></script>
+    <script src="https://unpkg.com/axios/dist/axios.min.js"></script>
+    <script language="JavaScript">
+      $(document).ready(function () {
+        if ($("#results").text().trim().length === 0) {
+          $("#results").addClass("hide");
+        }
+      });
+      function ConnectionText(connection) {
+        console.log(connection);
+        if (!connection) {
+          return "&nbsp";
+        } else if (connection < 4) {
+          return ["1st", "2nd", "3rd"][connection - 1];
+        } else {
+          return `${connection}th`;
+        }
+      }
+
+      function RenderUser(container, user) {
+        const div = document.createElement("div");
+        div.classList.add("user");
+        const cls = user.connection ? "connection" : "hide";
+        const con = ConnectionText(user.connection);
+
+        div.innerHTML = `<div class='${cls}'><span>${con}</span></div><div class='userName'>${user.name}</div>`;
+        const button = document.createElement("div");
+        button.innerHTML = user.connection === 1 ? "Remove" : "Add";
+        button.classList.add("button");
+        button.addEventListener("click", () => {
+          const cmd = user.connection === 1 ? "unfriend" : "friend";
+          const userId = document.getElementById("user").value;
+          axios
+            .get(`http://localhost:3001/api/${cmd}/${userId}/${user.id}`)
+            .then((response) => {
+              if (response.data.success) {
+                // Update the user's connection status
+                user.connection = cmd === "friend" ? 1 : 0;
+
+                // Update the UI elements based on the connection status
+                if (user.connection === 1) {
+                  // User is a friend, update UI accordingly
+                  button.textContent = "Remove";
+                  // Update any other UI elements as needed
+                } else {
+                  // User is not a friend, update UI accordingly
+                  button.textContent = "Add";
+                  // Update any other UI elements as needed
+                }
+              } else if (response.data.message) {
+                alert(response.data.message);
+              }
+            })
+            .catch((error) => {
+              // Handle errors
+              console.error(error);
+            });
+        });
+        div.appendChild(button);
+        container.appendChild(div);
+      }
+
+      function RenderError(container, error) {
+        const div = document.createElement("div");
+        if (error.response.status === 400) {
+          div.classList.add("error");
+          div.innerHTML = `ERROR: Search required!`;
+          container.appendChild(div);
+          return;
+        }
+        div.classList.add("error");
+        div.innerHTML = `ERROR: ${error}`;
+        container.appendChild(div);
+      }
+
+      function RenderDataNotFound(container, text = "Data not found!") {
+        const div = document.createElement("div");
+        div.classList.add("error");
+        div.innerHTML = text;
+        container.appendChild(div);
+      }
+
+      function Render(data) {
+        const div = document.getElementById("results");
+        div.innerHTML = "";
+
+        if (data.success) {
+          if (data.users && data.users.length === 0) {
+            RenderDataNotFound(div);
+          } else {
+            data.users.forEach((user) => RenderUser(div, user));
+          }
+        } else {
+          RenderError(div, data.error);
+        }
+      }
+
+      function Search() {
+        const userId = document.getElementById("user").value;
+        const search = document.getElementById("search").value;
+        axios
+          .get(`/api/search/${userId}/${search !== "" ? search : null}`)
+          .then((response) => {
+            const div = document.getElementById("results");
+            div.classList.remove("hide");
+            Render(response.data);
+          })
+          .catch((err) => {
+            const div = document.getElementById("results");
+            div.innerHTML = "";
+            RenderError(div, err);
+          });
+      }
+    </script>
+  </head>
+
+  <body>
+    <div class="search">
+      <div class="input-container">
+        <label>User Id </label>
+        <input id="user" value="1337" />
+      </div>
+      <div class="input-container">
+        <label>Search </label>
+        <input id="search" onkeyup="Search()" />
+      </div>
+    </div>
+    <div id="results"></div>
+  </body>
+</html>

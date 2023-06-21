@@ -1,0 +1,18 @@
+{
+  "version": "1.0.0",
+  "main": "index.js",
+  "dependencies": {
+    "express": "^4.17.2",
+    "sqlite3": "^5.0.2"
+  },
+  "scripts": {
+    "start": "node --max-old-space-size=4096 index.js",
+    "dev": "nodemon --max-old-space-size=4096 index.js"
+  },
+  "devDependencies": {
+    "nodemon": "^2.0.22"
+  },
+  "nodemonConfig": {
+    "ext": "js html"
+  }
+}
